@@ -3,6 +3,8 @@ from smtpd import SMTPServer
 import json
 from os.path import exists
 from time import sleep
+import maillib
+import chardet
 
 from tox import Tox
 
@@ -54,8 +56,12 @@ class ToxSender(Tox):
 
 
 def send_mail(peer, mailfrom, rcpttos, data):
+    data = data.decode(chardet.detect(data)['encoding'])
     mail = {'mailfrom': mailfrom, 'rcpttos': rcpttos, 'data': data}
     mail = json.dumps(mail)
+    if len(mail) > 1368:
+        raise NotImplementedError()
+
     sender = ToxSender()
     sender(peer, mail)
 
