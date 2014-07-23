@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 from toxsmtp import __version__
 
 
-install_requires = ['PyTox', 'chardet']
+install_requires = ['PyTox', 'chardet', 'tornado', 'bonzo', 'pyzmail']
 
 try:
     import argparse     # NOQA
