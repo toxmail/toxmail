@@ -32,11 +32,10 @@ class ToxClient(Tox):
         self.save_to_file(DATA)
 
     def on_friend_message(self, friend_id, message):
-        import pdb; pdb.set_trace()
         mail = PyzMessage.factory(message)
         mail['X-Tox-Friend-Id'] = str(friend_id)
         self.mails.add(str(mail))
-        print 'Message stored'
+        print 'Mail from %s stored' % mail['X-Tox-Id']
 
     def _get_tox_id(self, mail):
         # TODO : find the tox id
@@ -59,21 +58,21 @@ class ToxClient(Tox):
 
         #friend_id = self.get_friend_id(tox_id)
         friend_id = 0
-        self._send_mail(friend_id, mail)
+        self._send_mail(tox_id, friend_id, mail)
 
     def _later(self, *args, **kw):
         return self.io_loop.call_later(self.interval, *args, **kw)
 
-    def _send_mail(self, friend_id, mail, tries=0):
+    def _send_mail(self, tox_id, friend_id, mail, tries=0):
         try:
             self.send_message(friend_id, mail)
-            print('Mail sent.')
+            print('Mail sent to %s.' % tox_id)
         except Exception:
             if tries > 200:
                 raise
             print('Try again %d' % tries)
             self.io_loop.call_later(self.interval*10, self._send_mail,
-                                    friend_id, mail, tries+1)
+                                    tox_id, friend_id, mail, tries+1)
 
     def on_connected(self):
         print('Connected to Tox.')
