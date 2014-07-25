@@ -1,0 +1,10 @@
+*.un~
+*.pyc
+lib
+bin
+include
+share
+data
+*.mails
+*.egg-info
+.Python

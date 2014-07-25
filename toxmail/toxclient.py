@@ -2,7 +2,8 @@ from tox import Tox, OperationFailedError
 import tornado
 import os.path
 from pyzmail import PyzMessage
-from toxsmtp.mails import Mails
+
+from toxmail.mails import Mails
 
 
 _SERVER = ["54.199.139.199", 33445,

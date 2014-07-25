@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-from toxsmtp import __version__
+from toxmail import __version__
 
 
 install_requires = ['PyTox', 'chardet', 'tornado', 'bonzo', 'pyzmail']
@@ -19,7 +19,7 @@ classifiers = ["Programming Language :: Python",
                "Development Status :: 1 - Planning"]
 
 
-setup(name='tox-smtp',
+setup(name='toxmail',
       version=__version__,
       packages=find_packages(),
       description=("Tox SMTP bridge"),
@@ -33,5 +33,5 @@ setup(name='tox-smtp',
       install_requires=install_requires,
       entry_points="""
       [console_scripts]
-      tox-smtp = toxsmtp.run:main
+      toxmail = toxmail.run:main
       """)

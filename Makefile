@@ -9,7 +9,7 @@ build:
 	bin/python setup.py develop
 
 test:	bin/nosetests
-	bin/nosetests -x toxsmtp
+	bin/nosetests -x toxmail
 
 bin/nosetests: bin/python
 	bin/pip install nose
