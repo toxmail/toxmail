@@ -12,7 +12,7 @@ _SERVER = ["54.199.139.199", 33445,
 
 class ToxClient(Tox):
 
-    def __init__(self, data='data', io_loop=None, server=None):
+    def __init__(self, data='data', maildir=None, io_loop=None, server=None):
         if server is None:
             server = _SERVER
         self.data = data
@@ -25,7 +25,9 @@ class ToxClient(Tox):
                                     self.server[2])
         self.io_loop.add_callback(self._init)
         self.interval = self.do_interval() / 1000.
-        self.mails = Mails(data+'.mails')
+        if maildir is None:
+            maildir = data+'.mails'
+        self.mails = Mails(maildir)
 
     def save(self):
         self.save_to_file(self.data)
