@@ -1,9 +1,9 @@
 import asyncore
-from smtpd import SMTPServer
 import json
 from os.path import exists
 from time import sleep
 import chardet
+import sys
 
 import tornado
 
@@ -16,13 +16,31 @@ class SMTP(SMTPServer):
     def _on_data(self, data):
         message = email.message_from_string(data)
         msg = PyzMessage.factory(payload)
-        self.write("250 Ok")
-        self.request_callback(msg)
+        try:
+            self.request_callback(msg)
+        except Exception, e:
+            print str(e)
+            self.write("554 " + str(e))
+        else:
+            self.write("250 Ok")
 
 
 def main():
-    print('Serving on localhost:2525')
-    tox = ToxClient()
+    if len(sys.argv) > 1:
+        data = sys.argv[1]
+    else:
+        data = 'data'
+    if len(sys.argv) > 2:
+        port = int(sys.argv[2])
+    else:
+        port = 2525
+
+
+    print('Serving on localhost:%d' % port)
+    tox = ToxClient(data)
     smtp = SMTP(tox.send_mail)
-    smtp.listen(2525)
-    tornado.ioloop.IOLoop.current().start()
+    smtp.listen(port)
+    try:
+        tornado.ioloop.IOLoop.current().start()
+    except KeyboardInterrupt:
+        tox.save()

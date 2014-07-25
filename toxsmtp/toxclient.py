@@ -1,22 +1,22 @@
-from tox import Tox
+from tox import Tox, OperationFailedError
 import tornado
 import os.path
 from pyzmail import PyzMessage
 from toxsmtp.mails import Mails
 
 
-DATA = 'data'
 _SERVER = ["54.199.139.199", 33445,
            "7F9C31FE850E97CEFD4C4591DF93FC757C7C12549DDD55F8EEAECC34FE76C029"]
 
 
 class ToxClient(Tox):
 
-    def __init__(self, io_loop=None, server=None):
+    def __init__(self, data='data', io_loop=None, server=None):
         if server is None:
             server = _SERVER
-        if os.path.exists(DATA):
-            self.load_from_file(DATA)
+        self.data = data
+        if os.path.exists(data):
+            self.load_from_file(data)
         self.server = server
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
         self.bootstrap_from_address(self.server[0], 1,
@@ -24,12 +24,19 @@ class ToxClient(Tox):
                                     self.server[2])
         self.io_loop.add_callback(self._init)
         self.interval = self.do_interval() / 1000.
-        self.mails = Mails()
+        self.mails = Mails(data+'.mails')
+
+    def save(self):
+        self.save_to_file(self.data)
 
     def on_friend_request(self, address, message):
-        print('Friend added: %s' % address)
-        self.add_friend_norequest(address)
-        self.save_to_file(DATA)
+        # XXX this should be handled by the dashboard
+        # XXX I don't know if we can have two process running
+        # under the same Tox-ID or not
+        #print('Friend added: %s' % address)
+        #self.add_friend_norequest(address)
+        #self.save_to_file(self.data)
+        pass
 
     def on_friend_message(self, friend_id, message):
         mail = PyzMessage.factory(message)
@@ -46,19 +53,27 @@ class ToxClient(Tox):
     # to send it off to ToxMail
     #
     def send_mail(self, mail):
-        tox_id = ('360E674BA34A8C761E9AE8858CCBFC8789A2A0FF9D'
-                  '42D2AF12340318D04A0E73FCC1E7314A7F')
+        to = mail['To']
+        if to.endswith('@tox'):
+            tox_id = to[:-len('@tox')].strip()
+        else:
+            tox_id = self._get_tox_id(to)
 
-        #tox_id = self._get_tox_id(mail['From'])
         mail['X-Tox-Id'] = tox_id
         mail = str(mail)
 
         if len(mail) > 1368:
             raise NotImplementedError()
 
-        #friend_id = self.get_friend_id(tox_id)
-        friend_id = 0
+        friend_id = self._to_friend_id(tox_id)
+        if friend_id is None:
+            print('Could not send to %s' % tox_id)
+            raise ValueError('Unknown friend')
+
         self._send_mail(tox_id, friend_id, mail)
+
+    def _to_friend_id(self, tox_id):
+        return self.get_friend_id(tox_id)
 
     def _later(self, *args, **kw):
         return self.io_loop.call_later(self.interval, *args, **kw)
