@@ -5,10 +5,10 @@ import os
 import socket
 import sys
 import traceback
-import mailbox
 import errno
 
 from tornado import ioloop
+from toxmail.mails import Mails
 
 logging.basicConfig(format="%(name)s %(levelname)s - %(message)s")
 log = logging.getLogger("toxmail")
@@ -58,7 +58,7 @@ class Connection(object):
 class Handler(object):
 
     def __init__(self, maildir='mails'):
-        self.maildir = mailbox.Maildir(maildir)
+        self.maildir = Mails(maildir)
 
     def USER(self, data):
         return "+OK user accepted"
@@ -106,12 +106,7 @@ class Handler(object):
     def DELE(self, data):
         index = int(data.split()[-1]) - 1
         key, __ = self._get_sorted()[index]
-        self.maildir.lock()
-        try:
-            self.maildir.remove(key)
-            self.maildir.flush()
-        finally:
-            self.maildir.unlock()
+        self.maildir.remove(key)
         return "+OK message %d deleted" % (index + 1)
 
     def NOOP(self, data):

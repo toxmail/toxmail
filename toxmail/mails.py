@@ -3,16 +3,20 @@ import email.utils
 import os
 
 
-class Mails(object):
-    def __init__(self, dir='mails'):
-        self.dir = dir
-        self.mbox = mailbox.Maildir(self.dir)
-
+class Mails(mailbox.Maildir):
     def add(self, raw):
         mail = mailbox.mboxMessage(raw)
-        self.mbox.lock()
+        self.lock()
         try:
-            self.mbox.add(mail)
-            self.mbox.flush()
+            super(Mails, self).add(mail)
+            self.flush()
         finally:
-            self.mbox.unlock()
+            self.unlock()
+
+    def remove(self, key):
+        self.lock()
+        try:
+            super(Mails, self).remove(key)
+            self.flush()
+        finally:
+            self.unlock()
