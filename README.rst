@@ -31,9 +31,21 @@ and public key. **Do not let anyone get this file**
 
 Your e-mails will be kept into the **bob.mails** directory.
 
+Toxmail Dasbhoard
+-----------------
+
+Once Toxmail is running, visit http://localhost:8080, you should
+see the dashboard with information about the configuration,
+a list of friends and a form to add new friends.
+
 
 Configuring your e-mail client
 ------------------------------
+
+XXX
+
+Inviting friends
+----------------
 
 XXX
 
@@ -45,10 +57,10 @@ that registers to the Tox DHT and runs:
 
 - an SMTP service
 - a Web Dashboard to manage the system
-- a ional POP3 service
+- a POP3 service
 
 When you run a ToxMail node, you can exchange e-mails with your friends that also
-have a ToxMail node running - using your regular e-mail desktop application.
+have a ToxMail node running - using your regular e-mail application.
 
 ToxMail stores your e-mail in a local Maildir.
 
