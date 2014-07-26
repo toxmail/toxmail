@@ -2,13 +2,50 @@
 ToxMail
 =======
 
-ToxMail is a Tox node for the distributed Tox network - https://tox.im
+**HIGHLY EXPERIMENTAL - USE AT YOUR OWN RISKS**
 
-ToxMail is a special Tox node that registers to the Tox DHT and runs:
+ToxMail is a secure messaging system that can be used to send
+and receive e-mails from your friends and family using your
+usual e-mail desktop client and maybe your webmail.
 
-- an SMTP service on the port of your choice (default is 2626)
-- a Web Dashboard to manage the node on the port of your choice (default is 8080)
-- an optional POP3 service on the port of your choice (default is 2727)
+Installation
+------------
+
+ToxMail is a server component that binds several sockets and needs
+to run at all times to send and receive e-mails.
+
+To install it, you need the latest Python 2, virtualenv and the
+Makefile tools.
+
+Then a simple make call should do the trick::
+
+    $ make build
+
+Once all the dependencies are pulled and build, you can run
+the server with **toxmail**::
+
+    $ bin/toxmail --tox-data bob
+
+Where **bob** is the Tox data file containing the generated private
+and public key. **Do not let anyone get this file**
+
+Your e-mails will be kept into the **bob.mails** directory.
+
+
+Configuring your e-mail client
+------------------------------
+
+XXX
+
+How ToxMail works
+-----------------
+
+ToxMail is a special Tox node for the distributed Tox network - https://tox.im
+that registers to the Tox DHT and runs:
+
+- an SMTP service
+- a Web Dashboard to manage the system
+- a ional POP3 service
 
 When you run a ToxMail node, you can exchange e-mails with your friends that also
 have a ToxMail node running - using your regular e-mail desktop application.
