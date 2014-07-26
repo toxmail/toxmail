@@ -20,16 +20,24 @@
 
   <ul>
   {% for friend in friends %}
-  <li><a href="mailto:{{friend['client_id']}}@tox">{{ escape(friend['client_id']) }}</a></li>
+  <li>
+  <form name="delete" action="friend" method="POST">
+      <a href="mailto:{{friend['client_id']}}@tox">{{ escape(friend['client_id']) }}</a>
+      <input type="hidden" name="client_id" value="{{friend['client_id']}}"></input>
+      <input type="submit" name="delete" value="delete"/>
+  </form>
+
+
+  </li>
   {% end %}
   </ul>
 
   <h3>Add a friend</h3>
   <p>Make sure your friend adds you back, or you won't be able to correspond.</p>
 
-  <form action="add_friend" method="GET">
+  <form name="add" action="friend" method="POST">
      Client Id: <input type="text" name="client_id" size="64"></input>
-     <input type="submit"/>
+     <input type="submit" name="add"/>
   </form>
 </div>
 
