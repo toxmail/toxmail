@@ -10,6 +10,7 @@ loader = template.Loader(os.path.dirname(__file__))
 class DashboardHandler(tornado.web.RequestHandler):
     def get(self):
         tox = self.application.tox
+        config = self.application.config
         client_id = tox.get_address()
         friends = []
 
@@ -19,7 +20,8 @@ class DashboardHandler(tornado.web.RequestHandler):
             friends.append(friend)
 
         resp = loader.load("index.html").generate(client_id=client_id,
-                                                  friends=friends)
+                                                  friends=friends,
+                                                  config=config)
         self.write(resp)
 
 

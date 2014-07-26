@@ -56,6 +56,7 @@ def main():
     smtp.listen(args.smtp_port)
 
     webapp.tox = tox
+    webapp.config = args
     webapp.listen(args.web_port)
 
     pop3 = POP3Server(args.maildir)

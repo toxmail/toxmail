@@ -5,9 +5,14 @@
 {% block body %}
 
 <div>
-  <h2>Tox configuration</h2>
+  <h2>Configuration</h2>
 
-  Client Id : {{client_id}}
+  <ul>
+    <li>Tox Client Id : {{client_id}}</li>
+    <li>SMTP port: {{config.smtp_port}}</li>
+    <li>POP3 port: {{config.pop3_port}}</li>
+  </ul>
+
 </div>
 
 <div>
@@ -15,7 +20,7 @@
 
   <ul>
   {% for friend in friends %}
-    <li>{{ escape(friend['client_id']) }}</li>
+  <li><a href="mailto:{{friend['client_id']}}@tox">{{ escape(friend['client_id']) }}</a></li>
   {% end %}
   </ul>
 
