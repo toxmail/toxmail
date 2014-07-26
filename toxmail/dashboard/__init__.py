@@ -23,6 +23,15 @@ class DashboardHandler(tornado.web.RequestHandler):
         self.write(resp)
 
 
+class FriendHandler(tornado.web.RequestHandler):
+    def get(self):
+        client_id = self.request.query_arguments['client_id'][0]
+        self.application.tox.add_friend_norequest(client_id)
+        self.application.tox.save()
+        self.redirect('/')
+
+
 application = tornado.web.Application([
     (r"/", DashboardHandler),
+    (r"/add_friend", FriendHandler)
 ])
