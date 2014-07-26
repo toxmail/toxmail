@@ -122,6 +122,7 @@ class POP3Server(object):
         self.maildir = maildir
         self.handler = Handler(self.maildir)
         self.sock = None
+        self.loop = ioloop.IOLoop.current()
 
     def listen(self, port):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -129,8 +130,12 @@ class POP3Server(object):
         self.sock.setblocking(0)
         self.sock.bind(('localhost', port))
         self.sock.listen(128)
-        loop = ioloop.IOLoop.current()
-        loop.add_handler(self.sock.fileno(), self._ready, loop.READ)
+        self.loop = ioloop.IOLoop.current()
+        self.loop.add_handler(self.sock.fileno(), self._ready, self.loop.READ)
+
+    def close(self):
+        self.loop.remove_handler(self.sock.fileno())
+        self.sock.close()
 
     def _ready(self, fd, events):
         while True:

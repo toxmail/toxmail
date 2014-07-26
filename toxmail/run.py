@@ -65,3 +65,4 @@ def main():
         tornado.ioloop.IOLoop.current().start()
     except KeyboardInterrupt:
         tox.save()
+        pop3.close()
