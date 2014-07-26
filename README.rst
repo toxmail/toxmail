@@ -21,7 +21,7 @@ Then a simple make call should do the trick::
 
     $ make build
 
-Once all the dependencies are pulled and build, you can run
+Once all the dependencies are pulled and built, you can run
 the server with **toxmail**::
 
     $ bin/toxmail --tox-data bob
