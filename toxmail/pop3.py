@@ -1,64 +1,55 @@
 # inspired from
 # http://code.activestate.com/recipes/534131-toxpop-python-pop3-server/
-import logging
 import os
 import socket
 import sys
 import traceback
 import errno
 
-from tornado import ioloop
+from tornado import ioloop, iostream
 from toxmail.mails import Mails
-
-logging.basicConfig(format="%(name)s %(levelname)s - %(message)s")
-log = logging.getLogger("toxmail")
-log.setLevel(logging.INFO)
 
 
 class Connection(object):
-    END = "\r\n"
-    def __init__(self, conn):
-        self.conn = conn
+    def __init__(self, connection, handler):
+        self.stream = iostream.IOStream(connection)
+        self.handler = handler
+        self.write("+OK toxmail file-based pop3 server ready")
+        self._read()
 
-    def __getattr__(self, name):
-        return getattr(self.conn, name)
+    def write(self, data):
+        self.stream.write(data + '\r\n')
 
-    def sendall(self, data, END=END):
-        if len(data) < 50:
-            log.debug("send: %r", data)
+    def _read(self):
+        self.stream.read_until('\r\n', self._eol_callback)
+
+    def _eol_callback(self, data):
+        self.handle_data(data)
+
+    def handle_data(self, data):
+        command = data.split(None, 1)[0]
+        print command
+        try:
+            cmd = getattr(self.handler, command)
+        except AttributeError:
+            self.write("-ERR unknown command")
         else:
-            log.debug("send: %r...", data[:50])
-        data += END
-        self.conn.sendall(data)
+            self.write(cmd(data))
+            if command is 'QUIT':
+                self.stream.close()
+                self.connection.close()
 
-    def recvall(self, END=END):
-        data = []
-        while True:
-            try:
-                chunk = self.conn.recv(4096)
-            except socket.error, e:
-                if e.args[0] not in (errno.EWOULDBLOCK, errno.EAGAIN):
-                    raise
-                continue
-
-            if END in chunk:
-                data.append(chunk[:chunk.index(END)])
-                break
-            data.append(chunk)
-            if len(data) > 1:
-                pair = data[-2] + data[-1]
-                if END in pair:
-                    data[-2] = pair[:pair.index(END)]
-                    data.pop()
-                    break
-        log.debug("recv: %r", "".join(data))
-        return "".join(data)
+        self._read()
 
 
 class Handler(object):
 
     def __init__(self, maildir='mails'):
         self.maildir = Mails(maildir)
+
+    def CAPA(self, data):
+        answer = ['+OK', 'TOP', 'USER', '.']
+        return '\r\n'.join(answer)
 
     def USER(self, data):
         return "+OK user accepted"
@@ -88,6 +79,7 @@ class Handler(object):
         index = 0
 
         for key, msg in self._get_sorted():
+            print key
             total += len(msg)
             res.append("%d %d" % (index+1, len(msg)))
 
@@ -145,29 +137,6 @@ class POP3Server(object):
                 if e.args[0] not in (errno.EWOULDBLOCK, errno.EAGAIN):
                     raise
                 return
-
-            conn.setblocking(0)
-
-            # XXX make block async
-            try:
-                conn = Connection(conn)
-                conn.sendall("+OK toxpop file-based pop3 server ready")
-                while True:
-                    data = conn.recvall()
-                    if data == '':
-                        continue
-
-                    print data
-                    command = data.split(None, 1)[0]
-
-                    try:
-                        cmd = getattr(self.handler, command)
-                    except AttributeError:
-                        conn.sendall("-ERR unknown command")
-                    else:
-                        conn.sendall(cmd(data))
-                        if command is 'QUIT':
-                            break
-            finally:
-                conn.close()
-                msg = None
+            else:
+                conn.setblocking(0)
+                Connection(conn, self.handler)

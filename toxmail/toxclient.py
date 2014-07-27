@@ -42,6 +42,7 @@ class ToxClient(Tox):
         pass
 
     def on_friend_message(self, friend_id, message):
+        print 'Receiving mail.'
         mail = PyzMessage.factory(message)
         mail['X-Tox-Friend-Id'] = str(friend_id)
         self.mails.add(str(mail))
@@ -51,10 +52,6 @@ class ToxClient(Tox):
         # TODO : find the tox id
         return 'xxx'
 
-    #
-    # TODO: store the mail in a directory and have a dedicate process
-    # to send it off to ToxMail
-    #
     def send_mail(self, mail, cb):
         to = mail['To']
         if to.endswith('@tox'):
