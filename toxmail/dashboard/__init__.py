@@ -31,13 +31,12 @@ class FriendHandler(tornado.web.RequestHandler):
         client_id = self.request.body_arguments['client_id'][0].strip()
         # XXX: make sure client id is a 64 long key
         tox = self.application.tox
-
         if 'add' in self.request.body_arguments:
             try:
                 tox.add_friend_norequest(client_id)
-            except OperationFailedError:
+            except OperationFailedError, e:
                 # XXX we want an error message
-                pass
+                print str(e)
             else:
                 tox.save()
         elif 'delete' in self.request.body_arguments:
