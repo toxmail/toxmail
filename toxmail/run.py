@@ -31,6 +31,9 @@ def main():
     parser.add_argument('--tox-data', type=str, default='data',
                         help="Tox data file path")
 
+    parser.add_argument('--smtp-storage', type=str, default=None,
+                        help="Storage for outgoing e-mail")
+
     parser.add_argument('--maildir', type=str, default=None,
                         help="Maildir to store mails")
 
@@ -46,13 +49,16 @@ def main():
     if args.maildir is None:
         args.maildir = args.tox_data + '.mails'
 
+    if args.smtp_storage is None:
+        args.smtp_storage = args.tox_data + '.out'
+
     print('ToxMail node starting...')
     print('Serving SMTP on localhost:%d' % args.smtp_port)
     print('Serving POP3 on localhost:%d' % args.pop3_port)
     print('Serving Dashboard on localhost:%d' % args.web_port)
 
     tox = ToxClient(args.tox_data)
-    smtp = SMTPServer(tox.send_mail)
+    smtp = SMTPServer(args.smtp_storage, tox.send_mail)
     smtp.listen(args.smtp_port)
 
     webapp.tox = tox

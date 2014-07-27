@@ -55,7 +55,7 @@ class ToxClient(Tox):
     # TODO: store the mail in a directory and have a dedicate process
     # to send it off to ToxMail
     #
-    def send_mail(self, mail):
+    def send_mail(self, mail, cb):
         to = mail['To']
         if to.endswith('@tox'):
             tox_id = to[:-len('@tox')].strip()
@@ -73,7 +73,7 @@ class ToxClient(Tox):
             print('Could not send to %s' % tox_id)
             raise ValueError('Unknown friend')
 
-        self._send_mail(tox_id, friend_id, mail)
+        self._send_mail(tox_id, friend_id, mail, cb)
 
     def _to_friend_id(self, tox_id):
         return self.get_friend_id(tox_id)
@@ -81,16 +81,19 @@ class ToxClient(Tox):
     def _later(self, *args, **kw):
         return self.io_loop.call_later(self.interval, *args, **kw)
 
-    def _send_mail(self, tox_id, friend_id, mail, tries=0):
+    def _send_mail(self, tox_id, friend_id, mail, cb, tries=0):
         try:
             self.send_message(friend_id, mail)
             print('Mail sent to %s.' % tox_id)
+            cb(True)
         except Exception:
-            if tries > 200:
-                raise
+            if tries > 10:
+                cb(False)
+                return
+
             print('Try again %d' % tries)
             self.io_loop.call_later(self.interval*10, self._send_mail,
-                                    tox_id, friend_id, mail, tries+1)
+                                    tox_id, friend_id, mail, cb, tries+1)
 
     def on_connected(self):
         print('Connected to Tox.')
