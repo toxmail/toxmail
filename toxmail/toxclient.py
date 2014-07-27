@@ -126,7 +126,14 @@ class ToxClient(Tox):
                                   mail, start, end, cb)
 
     def _send_chunk(self, file_id, friend_id, mail, start, end, cb, tries=0):
-        print 'sending chunk %d:%d out of %d' % (start, end, len(mail))
+
+        total_size = len(mail)
+
+        chunk_size = self.file_data_size(friend_id)
+        if end > total_size:
+            end = total_size
+
+        print 'sending chunk %d=>%d out of %d' % (start, end, len(mail))
         data = mail[start:end]
         self.do()
 
@@ -141,15 +148,15 @@ class ToxClient(Tox):
                                     end, cb, tries+1)
             return
 
-        chunk_size = self.file_data_size(friend_id)
         print 'chunk sent'
-        if len(mail) > end:
+        if total_size > end:
             # need more sending
-            start = end + 1
+            start = end
+
             if len(mail) > start + chunk_size:
                 end = start + chunk_size
             else:
-                end = len(mail)
+                end = total_size
 
             self.io_loop.add_callback(self._send_chunk, file_id,
                                       friend_id, mail, start,
