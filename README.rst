@@ -14,8 +14,10 @@ Installation
 ToxMail is a server component that binds several sockets and needs
 to run at all times to send and receive e-mails.
 
-To install it, you need the latest Python 2, virtualenv and the
-Makefile tools.
+To install it, you need the latest Python 2, virtualenv, the Tox lib
+and the Makefile tools.
+
+To install the Tox library, you can refer to : https://github.com/irungentoo/toxcore/blob/master/INSTALL.md
 
 Then a simple make call should do the trick::
 
