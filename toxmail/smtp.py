@@ -24,13 +24,15 @@ class SMTPServer(TCPServer):
             if mail.endswith('.sending'):
                 continue
             path = os.path.join(self.storage, mail)
-            with open(path) as f:
+            sending_path = path + '.sending'
+            os.rename(path, sending_path)
+
+            with open(sending_path) as f:
                 print 'sending %s' % path
                 mail = PyzMessage.factory(f.read())
                 callback = functools.partial(self._send_callback, path)
                 try:
                     self.send_mail(mail, callback)
-                    os.rename(path, path + '.sending')
                 except Exception, e:
                     print str(e)
 
