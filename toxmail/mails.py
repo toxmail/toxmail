@@ -8,7 +8,7 @@ class Mails(mailbox.Maildir):
         mail = mailbox.mboxMessage(raw)
         self.lock()
         try:
-            super(Mails, self).add(mail)
+            mailbox.Maildir.add(self, mail)
             self.flush()
         finally:
             self.unlock()
@@ -16,7 +16,7 @@ class Mails(mailbox.Maildir):
     def remove(self, key):
         self.lock()
         try:
-            super(Mails, self).remove(key)
+            mailbox.Maildir.remove(self, key)
             self.flush()
         finally:
             self.unlock()
