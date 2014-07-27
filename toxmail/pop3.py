@@ -1,11 +1,5 @@
-# inspired from
-# http://code.activestate.com/recipes/534131-toxpop-python-pop3-server/
-import os
 import socket
-import sys
-import traceback
 import errno
-
 from tornado import ioloop, iostream
 from toxmail.mails import Mails
 

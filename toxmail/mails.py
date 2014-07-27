@@ -1,6 +1,4 @@
 import mailbox
-import email.utils
-import os
 
 
 class Mails(mailbox.Maildir):

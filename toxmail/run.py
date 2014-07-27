@@ -1,18 +1,11 @@
-import asyncore
-import json
-from os.path import exists
-from time import sleep
-import chardet
 import sys
 import argparse
-
 import tornado
 
 from toxmail.toxclient import ToxClient
 from toxmail.dashboard import application as webapp
 from toxmail.smtp import SMTPServer
 from toxmail.pop3 import POP3Server
-
 from toxmail import __version__
 
 
@@ -39,7 +32,6 @@ def main():
 
     parser.add_argument('--version', action='store_true', default=False,
                         help='Displays version and exits.')
-
 
     args = parser.parse_args()
     if args.version:

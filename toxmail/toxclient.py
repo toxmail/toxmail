@@ -1,4 +1,4 @@
-from tox import Tox, OperationFailedError
+from tox import Tox
 import tornado
 import os.path
 from pyzmail import PyzMessage
