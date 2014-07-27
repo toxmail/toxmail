@@ -87,6 +87,7 @@ class Handler(object):
     def RETR(self, data):
         index = int(data.split()[-1]) - 1
         __, msg = self._get_sorted()[index]
+        # XXX should stream here
         return "+OK %i octets\r\n%s\r\n." % (len(msg), msg)
 
     def DELE(self, data):

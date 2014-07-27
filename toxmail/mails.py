@@ -2,6 +2,12 @@ import mailbox
 
 
 class Mails(mailbox.Maildir):
+    def __init__(self, path):
+        mailbox.Maildir.__init__(self, path, self._factory, create=True)
+
+    def _factory(self, file):
+        return file.read()
+
     def add(self, raw):
         mail = mailbox.mboxMessage(raw)
         self.lock()

@@ -1,8 +1,7 @@
-from tox import Tox
+from tox import Tox, OperationFailedError
 import tornado
 import os.path
-from pyzmail import PyzMessage
-
+import hashlib
 from toxmail.mails import Mails
 
 
@@ -28,25 +27,48 @@ class ToxClient(Tox):
         if maildir is None:
             maildir = data+'.mails'
         self.mails = Mails(maildir)
+        self._files = {}
 
     def save(self):
         self.save_to_file(self.data)
 
+    def on_file_send_request(self, friend_id, file_id, size, filename):
+        print 'File request accepted.'
+        self._files[file_id] = size, filename, ''
+        self.file_send_control(friend_id, 1, file_id, Tox.FILECONTROL_ACCEPT)
+        self.do()
+
+    def on_file_control(self, friend_id, receive_send, file_id, ct, data):
+        if receive_send == 1 and ct == Tox.FILECONTROL_ACCEPT:
+            print 'Friend accepting the file'
+        elif receive_send == 0 and ct == Tox.FILECONTROL_FINISHED:
+            # all data sent over
+            print 'all data sent'
+            size, filename, received = self._files[file_id]
+            self._mail_received(friend_id, received)
+            del self._files[file_id]
+        else:
+            print 'file control'
+            print 'receive_send ' + str(receive_send)
+            print 'file_id ' + str(file_id)
+            print 'ct ' + str(ct)
+        self.do()
+
+    def on_file_data(self, friend_id, file_id, data):
+        print 'receiving data'
+        size, filename, received = self._files[file_id]
+        received += data
+        self._files[file_id] = size, filename, received
+
     def on_friend_request(self, address, message):
-        # XXX this should be handled by the dashboard
-        # XXX I don't know if we can have two process running
-        # under the same Tox-ID or not
-        #print('Friend added: %s' % address)
-        #self.add_friend_norequest(address)
-        #self.save_to_file(self.data)
-        pass
+        print('Not taking friend requests here.')
 
     def on_friend_message(self, friend_id, message):
-        print 'Receiving mail.'
-        mail = PyzMessage.factory(message)
-        mail['X-Tox-Friend-Id'] = str(friend_id)
-        self.mails.add(str(mail))
-        print 'Mail from %s stored' % mail['X-Tox-Id']
+        print('using files to send messages.')
+
+    def _mail_received(self, friend_id, mail):
+        print 'Mail Received.'
+        self.mails.add(mail)
 
     def _get_tox_id(self, mail):
         # TODO : find the tox id
@@ -59,17 +81,18 @@ class ToxClient(Tox):
         else:
             tox_id = self._get_tox_id(to)
 
-        mail['X-Tox-Id'] = tox_id
-        mail = str(mail)
-
-        if len(mail) > 1368:
-            raise NotImplementedError()
-
         friend_id = self._to_friend_id(tox_id)
         if friend_id is None:
             print('Could not send to %s' % tox_id)
             raise ValueError('Unknown friend')
 
+        if not self.get_friend_connection_status(friend_id):
+            print('Friend not connected')
+            cb(False)
+            return
+
+        mail['X-Tox-Id'] = tox_id
+        mail = str(mail)
         self._send_mail(tox_id, friend_id, mail, cb)
 
     def _to_friend_id(self, tox_id):
@@ -79,18 +102,64 @@ class ToxClient(Tox):
         return self.io_loop.call_later(self.interval, *args, **kw)
 
     def _send_mail(self, tox_id, friend_id, mail, cb, tries=0):
+        self.do()
+        mail = str(mail)
+        hash = hashlib.md5(mail).hexdigest()
+        chunk_size = self.file_data_size(friend_id)
         try:
-            self.send_message(friend_id, mail)
-            print('Mail sent to %s.' % tox_id)
-            cb(True)
-        except Exception:
+            file_id = self.new_file_sender(friend_id, len(mail), hash)
+        except OperationFailedError:
             if tries > 10:
                 cb(False)
                 return
 
-            print('Try again %d' % tries)
-            self.io_loop.call_later(self.interval*10, self._send_mail,
-                                    tox_id, friend_id, mail, cb, tries+1)
+            self.io_loop.call_later(self.interval*10,
+                                    self._send_mail, tox_id,
+                                    friend_id, mail, cb, tries+1)
+            return
+
+        print 'now sending chunks'
+        start = 0
+        end = start + chunk_size
+        self.do()
+        self.io_loop.add_callback(self._send_chunk, file_id, friend_id,
+                                  mail, start, end, cb)
+
+    def _send_chunk(self, file_id, friend_id, mail, start, end, cb, tries=0):
+        print 'sending chunk %d:%d out of %d' % (start, end, len(mail))
+        data = mail[start:end]
+        self.do()
+
+        try:
+            self.file_send_data(friend_id, file_id, data)
+        except OperationFailedError:
+            if tries > 200:
+                cb(False)
+                return
+            self.io_loop.call_later(self.interval*10, self._send_chunk,
+                                    file_id, friend_id, mail, start,
+                                    end, cb, tries+1)
+            return
+
+        chunk_size = self.file_data_size(friend_id)
+        print 'chunk sent'
+        if len(mail) > end:
+            # need more sending
+            start = end + 1
+            if len(mail) > start + chunk_size:
+                end = start + chunk_size
+            else:
+                end = len(mail)
+
+            self.io_loop.add_callback(self._send_chunk, file_id,
+                                      friend_id, mail, start,
+                                      end, cb)
+        else:
+            # done
+            self.file_send_control(friend_id, 0, file_id,
+                                   Tox.FILECONTROL_FINISHED)
+            self.do()
+            cb(True)
 
     def on_connected(self):
         print('Connected to Tox.')

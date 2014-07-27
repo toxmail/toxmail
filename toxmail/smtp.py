@@ -8,6 +8,8 @@ from tornado import ioloop
 
 from pyzmail import PyzMessage
 
+CRLF = '\r\n'
+
 
 class SMTPServer(TCPServer):
     def __init__(self, storage, sender, io_loop=None, **kwargs):
@@ -47,7 +49,6 @@ class SMTPServer(TCPServer):
             os.rename(mail + '.sending', mail)
 
     def _callback(self, mail):
-        mail = str(mail)
         hash = hashlib.md5(mail).hexdigest()
         with open(os.path.join(self.storage, hash), 'w') as f:
             f.write(mail)
@@ -58,12 +59,43 @@ class SMTPServer(TCPServer):
 
 class SMTPConnection(_SMTPConnection):
     def _on_data(self, data):
-        data = str(data)
-        msg = PyzMessage.factory(data)
         try:
-            self.request_callback(msg)
+            self.request_callback(data)
         except Exception, e:
             print str(e)
             self.write("554 " + str(e))
         else:
             self.write("250 Ok")
+
+    def _on_commands(self, line):
+        if self.__state == self.COMMAND:
+            if not line:
+                self.write('500 Error: bad syntax')
+                return
+            i = line.find(' ')
+            if i < 0:
+                raw_command = line.strip()
+                arg = None
+            else:
+                raw_command = line[:i].strip()
+                arg = line[i + 1:].strip()
+            method = getattr(self, 'command_' + raw_command.lower(), None)
+            if not method:
+                self.write('502 Error: command "%s" not implemented' %
+                           raw_command)
+                return
+            method(arg)
+        elif self.__state == self.DATA:
+            data = []
+            for text in line.split(CRLF):
+                if text and text[0] == '.':
+                    data.append(text[1:])
+                else:
+                    data.append(text)
+            self.__data = '\n'.join(data)
+            self.__rcpttos = []
+            self.__mailfrom = None
+            self.__state = self.COMMAND
+            self._on_data(self.__data)
+        else:
+            self.write('451 Internal confusion')
