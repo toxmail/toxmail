@@ -157,7 +157,9 @@ class POP3Server(object):
                     if data == '':
                         continue
 
+                    print data
                     command = data.split(None, 1)[0]
+
                     try:
                         cmd = getattr(self.handler, command)
                     except AttributeError:
