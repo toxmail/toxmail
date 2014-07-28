@@ -25,8 +25,9 @@
   <ul>
   {% for friend in friends %}
   <li>
+  {{friend['email']}} --
   <form name="delete" action="friend" method="POST">
-      <a href="mailto:{{friend['client_id']}}@tox">{{ escape(friend['client_id']) }}</a>
+      <a href="mailto:{{friend['email']}}">{{ escape(friend['client_id']) }}</a>
       <input type="hidden" name="client_id" value="{{friend['client_id']}}"></input>
       <input type="submit" name="delete" value="delete"/>
   </form>
@@ -39,7 +40,10 @@
 
   <form class="navbar-form navbar-left" role="search" name="add" action="friend" method="POST">
     <div class="form-group">
-     <input type="text" class="form-control" name="client_id" size="64" placeholder="Paste a Friend Tox Id here to add it to the list."></input>
+        Tox Client Id: <input type="text" class="form-control" name="client_id" size="64" placeholder="Paste a Friend Tox Id here to add it to the list."></input>
+        E-Mail:
+        <input type="text" class="form-control" name="email"></input>
+
     </div>
     <input name="add" type="submit" class="btn btn-default"/>
 

@@ -12,15 +12,23 @@ class DashboardHandler(tornado.web.RequestHandler):
     def get(self):
         tox = self.application.tox
         config = self.application.config
-        client_id = tox.get_address()
+        contacts = self.application.contacts
+        my_client_id = tox.get_address()
         friends = []
 
         for friend_id in tox.get_friendlist():
             friend = {'friend_id': friend_id}
-            friend['client_id'] = tox.get_client_id(friend_id)
+            client_id = tox.get_client_id(friend_id)
+            friend['client_id'] = client_id
+            contact = contacts.first(client_id=client_id)
+            if contact is not None:
+                friend['email'] = contact['email']
+            else:
+                friend['email'] = '%s@tox' % client_id
+
             friends.append(friend)
 
-        resp = loader.load("index.html").generate(client_id=client_id,
+        resp = loader.load("index.html").generate(client_id=my_client_id,
                                                   friends=friends,
                                                   config=config)
         self.write(resp)
@@ -29,9 +37,12 @@ class DashboardHandler(tornado.web.RequestHandler):
 class FriendHandler(tornado.web.RequestHandler):
     def post(self):
         client_id = self.request.body_arguments['client_id'][0].strip()
+        contacts = self.application.contacts
+
         # XXX: make sure client id is a 64 long key
         tox = self.application.tox
         if 'add' in self.request.body_arguments:
+
             try:
                 tox.add_friend_norequest(client_id)
             except OperationFailedError, e:
@@ -39,10 +50,22 @@ class FriendHandler(tornado.web.RequestHandler):
                 print str(e)
             else:
                 tox.save()
-        elif 'delete' in self.request.body_arguments:
             friend_id = tox.get_friend_id(client_id)
-            tox.del_friend(friend_id)
-            tox.save()
+            email = self.request.body_arguments['email'][0].strip()
+            contact = {'friend_id': friend_id, 'client_id': client_id}
+            contacts.add(email, **contact)
+            contacts.save()
+        elif 'delete' in self.request.body_arguments:
+            try:
+                friend_id = tox.get_friend_id(client_id)
+                tox.del_friend(friend_id)
+            except OperationFailedError, e:
+                print str(e)
+            else:
+                tox.save()
+
+            contacts.delete_first(client_id=client_id)
+            contacts.save()
 
         self.redirect('/')
 

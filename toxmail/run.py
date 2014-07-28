@@ -6,6 +6,8 @@ from toxmail.toxclient import ToxClient
 from toxmail.dashboard import application as webapp
 from toxmail.smtp import SMTPServer
 from toxmail.pop3 import POP3Server
+from toxmail.contacts import Contacts
+
 from toxmail import __version__
 
 
@@ -21,13 +23,16 @@ def main():
     parser.add_argument('--web-port', type=int, default=8080,
                         help="Dashboard port")
 
-    parser.add_argument('--tox-data', type=str, default='data',
+    parser.add_argument('--tox-data', default='data',
                         help="Tox data file path")
 
-    parser.add_argument('--smtp-storage', type=str, default=None,
+    parser.add_argument('--smtp-storage', type=str, default='',
                         help="Storage for outgoing e-mail")
 
-    parser.add_argument('--maildir', type=str, default=None,
+    parser.add_argument('--contacts-db', type=str, default='',
+                        help="Storage for contacts")
+
+    parser.add_argument('--maildir', type=str, default='',
                         help="Maildir to store mails")
 
     parser.add_argument('--version', action='store_true', default=False,
@@ -38,23 +43,31 @@ def main():
         print(__version__)
         sys.exit(0)
 
-    if args.maildir is None:
+    if not args.maildir:
         args.maildir = args.tox_data + '.mails'
 
-    if args.smtp_storage is None:
+    if not args.smtp_storage:
         args.smtp_storage = args.tox_data + '.out'
 
+    if not args.contacts_db:
+        args.contacts_db = args.tox_data + '.contacts'
+
     print('ToxMail node starting...')
+    print('Contact Database %r' % args.contacts_db)
+    print('Maildir %r' % args.maildir)
+    print('SMTP Storage %r' % args.smtp_storage)
     print('Serving SMTP on localhost:%d' % args.smtp_port)
     print('Serving POP3 on localhost:%d' % args.pop3_port)
     print('Serving Dashboard on localhost:%d' % args.web_port)
 
-    tox = ToxClient(args.tox_data)
+    contacts = Contacts(args.contacts_db)
+    tox = ToxClient(args.tox_data, contacts=contacts)
     smtp = SMTPServer(args.smtp_storage, tox.send_mail)
     smtp.listen(args.smtp_port)
 
     webapp.tox = tox
     webapp.config = args
+    webapp.contacts = contacts
     webapp.listen(args.web_port)
 
     pop3 = POP3Server(args.maildir)
@@ -64,4 +77,5 @@ def main():
         tornado.ioloop.IOLoop.current().start()
     except KeyboardInterrupt:
         tox.save()
+        contacts.save()
         pop3.close()

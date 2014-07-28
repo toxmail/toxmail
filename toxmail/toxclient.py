@@ -11,7 +11,9 @@ _SERVER = ["54.199.139.199", 33445,
 
 class ToxClient(Tox):
 
-    def __init__(self, data='data', maildir=None, io_loop=None, server=None):
+    def __init__(self, data='data', maildir=None, contacts=None,
+                 io_loop=None, server=None):
+        self.contacts = contacts
         if server is None:
             server = _SERVER
         self.data = data
@@ -70,38 +72,38 @@ class ToxClient(Tox):
         print 'Mail Received.'
         self.mails.add(mail)
 
-    def _get_tox_id(self, mail):
-        # TODO : find the tox id
-        return 'xxx'
-
     def send_mail(self, mail, cb):
         to = mail['To']
         if to.endswith('@tox'):
-            tox_id = to[:-len('@tox')].strip()
+            client_id = to[:-len('@tox')].strip()
         else:
-            tox_id = self._get_tox_id(to)
+            client_id = self.contacts.get(mail)
 
-        friend_id = self._to_friend_id(tox_id)
+        if client_id is None:
+            print('Could not send to %s' % mail)
+            raise ValueError('Unknown contact.')
+
+        friend_id = self._to_friend_id(client_id)
         if friend_id is None:
-            print('Could not send to %s' % tox_id)
-            raise ValueError('Unknown friend')
+            print('Could not send to %s' % client_id)
+            raise ValueError('Unknown Tox friend.')
 
         if not self.get_friend_connection_status(friend_id):
             print('Friend not connected')
             cb(False)
             return
 
-        mail['X-Tox-Id'] = tox_id
+        mail['X-Tox-Client-Id'] = client_id
         mail = str(mail)
-        self._send_mail(tox_id, friend_id, mail, cb)
+        self._send_mail(client_id, friend_id, mail, cb)
 
-    def _to_friend_id(self, tox_id):
-        return self.get_friend_id(tox_id)
+    def _to_friend_id(self, client_id):
+        return self.get_friend_id(client_id)
 
     def _later(self, *args, **kw):
         return self.io_loop.call_later(self.interval, *args, **kw)
 
-    def _send_mail(self, tox_id, friend_id, mail, cb, tries=0):
+    def _send_mail(self, client_id, friend_id, mail, cb, tries=0):
         self.do()
         mail = str(mail)
         hash = hashlib.md5(mail).hexdigest()
@@ -114,7 +116,7 @@ class ToxClient(Tox):
                 return
 
             self.io_loop.call_later(self.interval*10,
-                                    self._send_mail, tox_id,
+                                    self._send_mail, client_id,
                                     friend_id, mail, cb, tries+1)
             return
 
