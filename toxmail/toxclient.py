@@ -74,10 +74,14 @@ class ToxClient(Tox):
 
     def send_mail(self, mail, cb):
         to = mail['To']
-        if to.endswith('@tox'):
+
+        client_id = None
+        contact = self.contacts.get(to)
+        if contact is not None:
+            client_id = contact.get('client_id')
+
+        if client_id is None and to.endswith('@tox'):
             client_id = to[:-len('@tox')].strip()
-        else:
-            client_id = self.contacts.get(mail)
 
         if client_id is None:
             print('Could not send to %s' % mail)
