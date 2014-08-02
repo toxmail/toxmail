@@ -8,13 +8,13 @@ from nacl.public import PublicKey, PrivateKey
 
 from toxmail.mails import Mails
 from toxmail.util import FileHandler
-from toxmail.crypto import encrypt_text
+from toxmail.crypto import encrypt_text, decrypt_text
 
 
 _SERVER = ["54.199.139.199", 33445,
            "7F9C31FE850E97CEFD4C4591DF93FC757C7C12549DDD55F8EEAECC34FE76C029"]
-_SUPERNODE = ('7683702CDED6EA0CD7A87D506A70A10CD14'
-              '5195D7ED4B6687641CDAC437C9B30CD254928B4F9')
+_SUPERNODE = ('331E01902CD1A3DD289A94C7C5FABECA19D0CB1DF7B'
+              'B17C6A6B6707F06BC104E8A6F4C454E4E')
 
 
 class ToxClient(Tox):
@@ -63,9 +63,15 @@ class ToxClient(Tox):
         mail_data = json.loads(mail)
         # is this a mail for myself or are we relaying ?
         target = mail_data['client_id']
-        content = mail_data['mail']
+        content = mail_data['mail'].decode('hex')
 
         if target == self.get_address():
+            pubkey = mail_data['sender'][:64]
+            pubkey = PublicKey(pubkey.decode('hex'))
+
+            encrypted = mail_data.get('encrypted', False)
+            if encrypted:
+                content = decrypt_text(content, self.privkey, pubkey)
             self.mails.add(content)
         else:
             # relaying
@@ -75,13 +81,18 @@ class ToxClient(Tox):
                 f.write(mail)
 
     def relay_mail(self, mail_data, cb):
-        data = json.dumps(mail_data)
-        client_id = data['client_id']
+        client_id = mail_data['client_id']
         friend_id = self._to_friend_id(client_id)
         if friend_id is None:
             print('Could not send to %s' % client_id)
             raise ValueError('Unknown Tox friend.')
 
+        if self.get_friend_connection_status(friend_id):
+            print('Friend is not online.')
+            cb(False)
+            return
+
+        data = json.dumps(mail_data)
         self.file_handler.send_file(client_id, friend_id, data, cb)
 
     def send_mail(self, mail, cb):
@@ -132,14 +143,16 @@ class ToxClient(Tox):
             # sending to supernode
             mail = encrypt_text(mail, self.privkey, self.supernode_pbkey)
             data = {'mail': mail.encode('hex'), 'client_id': client_id,
-                    'hash': hash}
+                    'hash': hash, 'encrypted': True,
+                    'sender': self.get_address()}
             data = json.dumps(data)
             self.file_handler.send_file(self.supernode, supernode_fid,
                                         data, cb)
         else:
             # sending directly to rcpt
             data = {'mail': mail.encode('hex'), 'client_id': client_id,
-                    'hash': hash}
+                    'hash': hash, 'encrypted': False,
+                    'sender': self.get_address()}
             data = json.dumps(data)
             self.file_handler.send_file(client_id, friend_id, data, cb)
 

@@ -13,7 +13,7 @@ class Relay(object):
         self.loop = io_loop or ioloop.IOLoop.current()
         self.loop.call_later(5, self.relay_mails)
         self.relayer = relayer
-        self.running = False
+        self.running = True
 
     def relay_mails(self):
         if not self.running:

@@ -59,6 +59,8 @@ class FileHandler(object):
 
     def _send_chunk(self, file_id, friend_id, data, start, end, cb, tries=0):
         total_size = len(data)
+
+        print '%d=>%d (%d)' % (start, end, total_size)
         chunk_size = self.tox.file_data_size(friend_id)
         if end > total_size:
             end = total_size
