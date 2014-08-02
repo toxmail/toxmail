@@ -2,7 +2,8 @@ from setuptools import setup, find_packages
 from toxmail import __version__
 
 
-install_requires = ['PyTox', 'tornado', 'bonzo', 'pyzmail']
+install_requires = ['PyTox', 'tornado', 'bonzo', 'pyzmail',
+                    'pynacl']
 
 try:
     import argparse     # NOQA

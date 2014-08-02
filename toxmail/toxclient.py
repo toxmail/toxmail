@@ -1,24 +1,39 @@
-from tox import Tox, OperationFailedError
-import tornado
-import os.path
+import json
 import hashlib
+import os.path
+
+from tox import Tox
+import tornado
+from nacl.public import PublicKey, PrivateKey
+
 from toxmail.mails import Mails
+from toxmail.util import FileHandler
+from toxmail.crypto import encrypt_text
 
 
 _SERVER = ["54.199.139.199", 33445,
            "7F9C31FE850E97CEFD4C4591DF93FC757C7C12549DDD55F8EEAECC34FE76C029"]
+_SUPERNODE = ('7683702CDED6EA0CD7A87D506A70A10CD14'
+              '5195D7ED4B6687641CDAC437C9B30CD254928B4F9')
 
 
 class ToxClient(Tox):
 
-    def __init__(self, data='data', maildir=None, contacts=None,
-                 io_loop=None, server=None):
+    def __init__(self, data='data', maildir=None, relaydir=None,
+                 contacts=None,
+                 io_loop=None, server=None, supernode=_SUPERNODE):
         self.contacts = contacts
         if server is None:
             server = _SERVER
         self.data = data
         if os.path.exists(data):
             self.load_from_file(data)
+
+        self.privkey, self.pubkey = self.get_keys()
+        self.pubkey = PublicKey(self.pubkey.decode('hex'))
+        self.privkey = PrivateKey(self.privkey.decode('hex'))
+        self.supernode_pbkey = PublicKey(supernode[:64].decode('hex'))
+
         self.server = server
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
         self.bootstrap_from_address(self.server[0], 1,
@@ -27,40 +42,15 @@ class ToxClient(Tox):
         self.io_loop.add_callback(self._init)
         self.interval = self.do_interval() / 1000.
         if maildir is None:
-            maildir = data+'.mails'
+            maildir = data + '.mails'
         self.mails = Mails(maildir)
-        self._files = {}
+        self.relaydir = relaydir
+        self.supernode = supernode
+        self.file_handler = FileHandler(self, self._mail_received,
+                                        self.io_loop)
 
     def save(self):
         self.save_to_file(self.data)
-
-    def on_file_send_request(self, friend_id, file_id, size, filename):
-        print 'File request accepted.'
-        self._files[file_id] = size, filename, ''
-        self.file_send_control(friend_id, 1, file_id, Tox.FILECONTROL_ACCEPT)
-        self.do()
-
-    def on_file_control(self, friend_id, receive_send, file_id, ct, data):
-        if receive_send == 1 and ct == Tox.FILECONTROL_ACCEPT:
-            print 'Friend accepting the file'
-        elif receive_send == 0 and ct == Tox.FILECONTROL_FINISHED:
-            # all data sent over
-            print 'all data sent'
-            size, filename, received = self._files[file_id]
-            self._mail_received(friend_id, received)
-            del self._files[file_id]
-        else:
-            print 'file control'
-            print 'receive_send ' + str(receive_send)
-            print 'file_id ' + str(file_id)
-            print 'ct ' + str(ct)
-        self.do()
-
-    def on_file_data(self, friend_id, file_id, data):
-        print 'receiving data'
-        size, filename, received = self._files[file_id]
-        received += data
-        self._files[file_id] = size, filename, received
 
     def on_friend_request(self, address, message):
         print('Not taking friend requests here.')
@@ -70,11 +60,25 @@ class ToxClient(Tox):
 
     def _mail_received(self, friend_id, mail):
         print 'Mail Received.'
-        self.mails.add(mail)
+        mail_data = json.loads(mail)
+        # is this a mail for myself or are we relaying ?
+        target = mail_data['client_id']
+        content = mail_data['mail']
+
+        if target == self.get_address():
+            self.mails.add(content)
+        else:
+            # relaying
+            print 'Mail to be relayed.'
+            hash = hashlib.md5(mail).hexdigest()
+            with open(os.path.join(self.relaydir, hash), 'w') as f:
+                f.write(mail)
+
+    def relay_mail(self, mail_data, cb):
+        raise NotImplementedError()
 
     def send_mail(self, mail, cb):
         to = mail['To']
-
         client_id = None
         contact = self.contacts.get(to)
         if contact is not None:
@@ -92,87 +96,51 @@ class ToxClient(Tox):
             print('Could not send to %s' % client_id)
             raise ValueError('Unknown Tox friend.')
 
+        # XXX later: instead of sending it to a supernode,
+        # send it to all online friends - they can be used as relays.
+        # once the message finally makes it, it can be deleted everywhere.
+        #
+        to_supernode = False
         if not self.get_friend_connection_status(friend_id):
             print('Friend not connected')
-            cb(False)
-            return
+            # check if the supernode is connected
+            supernode_fid = self._to_friend_id(self.supernode)
+            if supernode_fid is None:
+                print('Could not send to %s' % supernode_fid)
+                raise ValueError('Unknown Tox friend.')
+
+            if self.get_friend_connection_status(supernode_fid):
+                # it's connected, we send the mail to the supernode.
+                to_supernode = True
+            else:
+                print('Supernode not connected')
+                cb(False)
+                return
 
         mail['X-Tox-Client-Id'] = client_id
         mail = str(mail)
-        self._send_mail(client_id, friend_id, mail, cb)
+        hash = hashlib.md5(mail).hexdigest()
+
+        if to_supernode:
+            # sending to supernode
+            mail = encrypt_text(mail, self.privkey, self.supernode_pbkey)
+            data = {'mail': mail.encode('hex'), 'client_id': client_id,
+                    'hash': hash}
+            data = json.dumps(data)
+            self.file_handler.send_file(self.supernode, supernode_fid,
+                                        data, cb)
+        else:
+            # sending directly to rcpt
+            data = {'mail': mail.encode('hex'), 'client_id': client_id,
+                    'hash': hash}
+            data = json.dumps(data)
+            self.file_handler.send_file(client_id, friend_id, data, cb)
 
     def _to_friend_id(self, client_id):
         return self.get_friend_id(client_id)
 
     def _later(self, *args, **kw):
         return self.io_loop.call_later(self.interval, *args, **kw)
-
-    def _send_mail(self, client_id, friend_id, mail, cb, tries=0):
-        self.do()
-        mail = str(mail)
-        hash = hashlib.md5(mail).hexdigest()
-        chunk_size = self.file_data_size(friend_id)
-        try:
-            file_id = self.new_file_sender(friend_id, len(mail), hash)
-        except OperationFailedError:
-            if tries > 10:
-                cb(False)
-                return
-
-            self.io_loop.call_later(self.interval*10,
-                                    self._send_mail, client_id,
-                                    friend_id, mail, cb, tries+1)
-            return
-
-        print 'now sending chunks'
-        start = 0
-        end = start + chunk_size
-        self.do()
-        self.io_loop.add_callback(self._send_chunk, file_id, friend_id,
-                                  mail, start, end, cb)
-
-    def _send_chunk(self, file_id, friend_id, mail, start, end, cb, tries=0):
-
-        total_size = len(mail)
-
-        chunk_size = self.file_data_size(friend_id)
-        if end > total_size:
-            end = total_size
-
-        print 'sending chunk %d=>%d out of %d' % (start, end, len(mail))
-        data = mail[start:end]
-        self.do()
-
-        try:
-            self.file_send_data(friend_id, file_id, data)
-        except OperationFailedError:
-            if tries > 200:
-                cb(False)
-                return
-            self.io_loop.call_later(self.interval*10, self._send_chunk,
-                                    file_id, friend_id, mail, start,
-                                    end, cb, tries+1)
-            return
-
-        print 'chunk sent'
-        if total_size > end:
-            # need more sending
-            start = end
-
-            if len(mail) > start + chunk_size:
-                end = start + chunk_size
-            else:
-                end = total_size
-
-            self.io_loop.add_callback(self._send_chunk, file_id,
-                                      friend_id, mail, start,
-                                      end, cb)
-        else:
-            # done
-            self.file_send_control(friend_id, 0, file_id,
-                                   Tox.FILECONTROL_FINISHED)
-            self.do()
-            cb(True)
 
     def on_connected(self):
         print('Connected to Tox.')

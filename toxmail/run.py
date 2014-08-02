@@ -7,6 +7,7 @@ from toxmail.dashboard import application as webapp
 from toxmail.smtp import SMTPServer
 from toxmail.pop3 import POP3Server
 from toxmail.contacts import Contacts
+from toxmail.relay import Relay
 
 from toxmail import __version__
 
@@ -35,6 +36,9 @@ def main():
     parser.add_argument('--maildir', type=str, default='',
                         help="Maildir to store mails")
 
+    parser.add_argument('--relaydir', type=str, default='',
+                        help="Storage for mails to relay.")
+
     parser.add_argument('--version', action='store_true', default=False,
                         help='Displays version and exits.')
 
@@ -46,6 +50,9 @@ def main():
     if not args.maildir:
         args.maildir = args.tox_data + '.mails'
 
+    if not args.relaydir:
+        args.relaydir = args.tox_data + '.relay'
+
     if not args.smtp_storage:
         args.smtp_storage = args.tox_data + '.out'
 
@@ -55,15 +62,18 @@ def main():
     print('ToxMail node starting...')
     print('Contact Database %r' % args.contacts_db)
     print('Maildir %r' % args.maildir)
+    print('Relay storage %r' % args.relaydir)
     print('SMTP Storage %r' % args.smtp_storage)
     print('Serving SMTP on localhost:%d' % args.smtp_port)
     print('Serving POP3 on localhost:%d' % args.pop3_port)
     print('Serving Dashboard on localhost:%d' % args.web_port)
 
     contacts = Contacts(args.contacts_db)
-    tox = ToxClient(args.tox_data, contacts=contacts)
+    tox = ToxClient(args.tox_data, maildir=args.maildir,
+                    relaydir=args.relaydir, contacts=contacts)
     smtp = SMTPServer(args.smtp_storage, tox.send_mail)
     smtp.listen(args.smtp_port)
+    relay = Relay(args.relaydir, tox.relay_mail)
 
     webapp.tox = tox
     webapp.config = args
@@ -79,3 +89,4 @@ def main():
         tox.save()
         contacts.save()
         pop3.close()
+        relay.stop()
