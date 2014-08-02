@@ -75,7 +75,14 @@ class ToxClient(Tox):
                 f.write(mail)
 
     def relay_mail(self, mail_data, cb):
-        raise NotImplementedError()
+        data = json.dumps(mail_data)
+        client_id = data['client_id']
+        friend_id = self._to_friend_id(client_id)
+        if friend_id is None:
+            print('Could not send to %s' % client_id)
+            raise ValueError('Unknown Tox friend.')
+
+        self.file_handler.send_file(client_id, friend_id, data, cb)
 
     def send_mail(self, mail, cb):
         to = mail['To']
