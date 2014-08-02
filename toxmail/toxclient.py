@@ -66,12 +66,14 @@ class ToxClient(Tox):
         content = mail_data['mail'].decode('hex')
 
         if target == self.get_address():
-            pubkey = mail_data['sender'][:64]
-            pubkey = PublicKey(pubkey.decode('hex'))
+            senderkey = mail_data['sender'][:64]
+            pubkey = PublicKey(senderkey.decode('hex'))
 
             encrypted = mail_data.get('encrypted', False)
             if encrypted:
+                print 'decrypting mail from %s' % senderkey
                 content = decrypt_text(content, self.privkey, pubkey)
+
             self.mails.add(content)
         else:
             # relaying
@@ -141,7 +143,11 @@ class ToxClient(Tox):
 
         if to_supernode:
             # sending to supernode
-            mail = encrypt_text(mail, self.privkey, self.supernode_pbkey)
+            client_key = client_id[:64]
+            print 'encrypting mail for %s' % client_key
+            client_key = PublicKey(client_key.decode('hex'))
+            mail = encrypt_text(mail, self.privkey, client_key)
+
             data = {'mail': mail.encode('hex'), 'client_id': client_id,
                     'hash': hash, 'encrypted': True,
                     'sender': self.get_address()}
