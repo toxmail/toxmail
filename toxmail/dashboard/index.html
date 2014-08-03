@@ -54,7 +54,13 @@
       <a href="mailto:{{friend['email']}}">{{ escape(friend['client_id']) }}</a>
   </td>
   <td>
-    <input type="checkbox"/>
+      {% if friend['relay'] %}
+        <input type="checkbox" checked="checked"/>
+      {% else %}
+         <input type="checkbox"/>
+
+      {% end %}
+
   </td>
   <td>
   <form name="delete" action="friend" method="POST">

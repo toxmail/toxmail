@@ -114,13 +114,12 @@ def user_lookup(email):
         query = '%s.%s.' % (user, domain)
         try:
             answers = dns.resolver.query(query, 'TXT')
-        except Exception, e:
+        except Exception:
             query = '%s._tox.%s.' % (user, domain)
             answers = dns.resolver.query(query, 'TXT')
 
         if len(answers) == 0:
             raise ValueError('No DNS entry')
-
 
         answer = str(answers[0])
         for entry in answer.strip('"').split(';'):

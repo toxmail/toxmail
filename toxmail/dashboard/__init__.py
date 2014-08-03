@@ -1,7 +1,6 @@
 import os
 from collections import defaultdict
 
-from beaker.session import Session
 import tornado.web
 from tornado import template
 from tox import OperationFailedError
@@ -10,7 +9,6 @@ from toxmail.util import user_lookup
 
 
 loader = template.Loader(os.path.dirname(__file__))
-
 # XXX add proper session handling
 _SESSIONS = defaultdict(dict)
 
@@ -31,8 +29,10 @@ class DashboardHandler(tornado.web.RequestHandler):
             contact = contacts.first(client_id=client_id)
             if contact is not None:
                 friend['email'] = contact.get('email', '')
+                friend['relay'] = contact.get('relay', False)
             else:
                 friend['email'] = ''
+                friend['relay'] = False
 
             friends.append(friend)
 
@@ -81,7 +81,8 @@ class FriendHandler(tornado.web.RequestHandler):
                 tox.save()
 
             friend_id = tox.get_friend_id(client_id)
-            contact = {'friend_id': friend_id, 'client_id': client_id}
+            contact = {'friend_id': friend_id, 'client_id': client_id,
+                       'relay': True}
             contacts.add(email, **contact)
             contacts.save()
         elif 'delete' in self.request.body_arguments:

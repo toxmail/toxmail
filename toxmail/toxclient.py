@@ -13,15 +13,12 @@ from toxmail.crypto import encrypt_text, decrypt_text
 
 _SERVER = ["54.199.139.199", 33445,
            "7F9C31FE850E97CEFD4C4591DF93FC757C7C12549DDD55F8EEAECC34FE76C029"]
-_SUPERNODE = ('331E01902CD1A3DD289A94C7C5FABECA19D0CB1DF7B'
-              'B17C6A6B6707F06BC104E8A6F4C454E4E')
 
 
 class ToxClient(Tox):
 
     def __init__(self, data='data', maildir=None, relaydir=None,
-                 contacts=None,
-                 io_loop=None, server=None, supernode=_SUPERNODE):
+                 contacts=None, io_loop=None, server=None):
         self.contacts = contacts
         if server is None:
             server = _SERVER
@@ -32,8 +29,6 @@ class ToxClient(Tox):
         self.privkey, self.pubkey = self.get_keys()
         self.pubkey = PublicKey(self.pubkey.decode('hex'))
         self.privkey = PrivateKey(self.privkey.decode('hex'))
-        self.supernode_pbkey = PublicKey(supernode[:64].decode('hex'))
-
         self.server = server
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
         self.bootstrap_from_address(self.server[0], 1,
@@ -45,7 +40,6 @@ class ToxClient(Tox):
             maildir = data + '.mails'
         self.mails = Mails(maildir)
         self.relaydir = relaydir
-        self.supernode = supernode
         self.file_handler = FileHandler(self, self._mail_received,
                                         self.io_loop)
 
@@ -97,6 +91,13 @@ class ToxClient(Tox):
         data = json.dumps(mail_data)
         self.file_handler.send_file(client_id, friend_id, data, cb)
 
+    def get_online_friends(self):
+        online = []
+        for fid in self.get_friendlist():
+            if self.get_friend_connection_status(fid):
+                online.append(fid, self.get_client_id(fid))
+        return online
+
     def send_mail(self, mail, cb):
         to = mail['To']
         client_id = None
@@ -116,33 +117,26 @@ class ToxClient(Tox):
             print('Could not send to %s' % client_id)
             raise ValueError('Unknown Tox friend.')
 
-        # XXX later: instead of sending it to a supernode,
-        # send it to all online friends - they can be used as relays.
-        # once the message finally makes it, it can be deleted everywhere.
-        #
-        to_supernode = False
+        to_relay = False
         if not self.get_friend_connection_status(friend_id):
             print('Friend not connected')
-            # check if the supernode is connected
-            supernode_fid = self._to_friend_id(self.supernode)
-            if supernode_fid is None:
-                print('Could not send to %s' % supernode_fid)
-                raise ValueError('Unknown Tox friend.')
 
-            if self.get_friend_connection_status(supernode_fid):
-                # it's connected, we send the mail to the supernode.
-                to_supernode = True
-            else:
-                print('Supernode not connected')
+            # get a list of online friends
+            online_friends = self.get_online_friends()
+
+            if len(online_friends) == []:
+                print('No friends online.')
                 cb(False)
                 return
+            else:
+                to_relay = True
 
         mail['X-Tox-Client-Id'] = client_id
         mail = str(mail)
         hash = hashlib.md5(mail).hexdigest()
 
-        if to_supernode:
-            # sending to supernode
+        if to_relay:
+            # sending to online friends...
             client_key = client_id[:64]
             print 'encrypting mail for %s' % client_key
             client_key = PublicKey(client_key.decode('hex'))
@@ -152,8 +146,10 @@ class ToxClient(Tox):
                     'hash': hash, 'encrypted': True,
                     'sender': self.get_address()}
             data = json.dumps(data)
-            self.file_handler.send_file(self.supernode, supernode_fid,
-                                        data, cb)
+
+            # XXX add myself to one of the relayers
+            for fid, cid in online_friends:
+                self.file_handler.send_file(cid, fid, data, cb)
         else:
             # sending directly to rcpt
             data = {'mail': mail.encode('hex'), 'client_id': client_id,
