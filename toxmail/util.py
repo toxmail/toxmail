@@ -1,6 +1,9 @@
 import hashlib
+import re
+
 from tox import OperationFailedError, Tox
 import tornado
+import dns.resolver
 
 
 class FileHandler(object):
@@ -97,3 +100,29 @@ class FileHandler(object):
                                        Tox.FILECONTROL_FINISHED)
             self.tox.do()
             cb(True)
+
+
+_DNS = re.compile('"v=tox1;id=([A-Z0-9]*)"')
+_EMAIL = re.compile('(.*?)@(.*)')
+_TOX = re.compile('[A-Z0-9]{72}')
+
+
+def user_lookup(email):
+    match = _EMAIL.findall(email)
+    if match:
+        user, domain = match[0]
+        query = '%s.%s.' % (user, domain)
+        answers = dns.resolver.query(query, 'TXT')
+        if len(answers) == 0:
+            raise ValueError('No DNS entry')
+        answer = str(answers[0])
+        res = _DNS.findall(answer)
+        if len(res) == 0:
+            raise ValueError('Wrong DNS entry - %s' % answer)
+        return res[0]
+    else:
+        # make sure we have a valid tox id
+        if _TOX.match(email):
+            return email
+
+    raise ValueError('Invalid email or Tox-Id')

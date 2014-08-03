@@ -1,15 +1,23 @@
 import os
+from collections import defaultdict
 
+from beaker.session import Session
 import tornado.web
 from tornado import template
 from tox import OperationFailedError
 
+from toxmail.util import user_lookup
+
 
 loader = template.Loader(os.path.dirname(__file__))
+
+# XXX add proper session handling
+_SESSIONS = defaultdict(dict)
 
 
 class DashboardHandler(tornado.web.RequestHandler):
     def get(self):
+        session = _SESSIONS[self.request.remote_ip]
         tox = self.application.tox
         config = self.application.config
         contacts = self.application.contacts
@@ -22,20 +30,22 @@ class DashboardHandler(tornado.web.RequestHandler):
             friend['client_id'] = client_id
             contact = contacts.first(client_id=client_id)
             if contact is not None:
-                friend['email'] = contact['email']
+                friend['email'] = contact.get('email', '')
             else:
-                friend['email'] = '%s@tox' % client_id
+                friend['email'] = ''
 
             friends.append(friend)
 
         resp = loader.load("index.html").generate(client_id=my_client_id,
                                                   friends=friends,
-                                                  config=config)
+                                                  config=config,
+                                                  alert=session.get('alert'))
         self.write(resp)
 
 
 class FriendHandler(tornado.web.RequestHandler):
     def post(self):
+        session = _SESSIONS[self.request.remote_ip]
         client_id = self.request.body_arguments['client_id'][0].strip()
         contacts = self.application.contacts
 
@@ -43,15 +53,34 @@ class FriendHandler(tornado.web.RequestHandler):
         tox = self.application.tox
         if 'add' in self.request.body_arguments:
 
+            # in that context client_id can be an e-mail or a client_id
+            try:
+                rclient_id = user_lookup(client_id)
+            except ValueError, e:
+                print str(e)
+                session['alert'] = str(e)
+                self.redirect('/')
+                return
+
+            if rclient_id != client_id:
+                email = client_id
+            else:
+                email = client_id + '@tox'
+
+            client_id = rclient_id
+
             try:
                 tox.add_friend_norequest(client_id)
             except OperationFailedError, e:
                 # XXX we want an error message
                 print str(e)
+                session['alert'] = str(e)
+                self.redirect('/')
+                return
             else:
                 tox.save()
+
             friend_id = tox.get_friend_id(client_id)
-            email = self.request.body_arguments['email'][0].strip()
             contact = {'friend_id': friend_id, 'client_id': client_id}
             contacts.add(email, **contact)
             contacts.save()

@@ -21,7 +21,13 @@ class Contacts(object):
             entry['email'] = email
             match = True
             for key, value in filter.items():
-                if entry.get(key) != value:
+                entry_value = entry.get(key)
+
+                if key == 'client_id':
+                    value = value[:64]
+                    entry_value = entry_value[:64]
+
+                if entry_value != value:
                     match = False
                     break
             if match:
