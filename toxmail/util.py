@@ -112,14 +112,27 @@ def user_lookup(email):
     if match:
         user, domain = match[0]
         query = '%s.%s.' % (user, domain)
-        answers = dns.resolver.query(query, 'TXT')
+        try:
+            answers = dns.resolver.query(query, 'TXT')
+        except Exception, e:
+            query = '%s._tox.%s.' % (user, domain)
+            answers = dns.resolver.query(query, 'TXT')
+
         if len(answers) == 0:
             raise ValueError('No DNS entry')
+
+
         answer = str(answers[0])
-        res = _DNS.findall(answer)
-        if len(res) == 0:
-            raise ValueError('Wrong DNS entry - %s' % answer)
-        return res[0]
+        for entry in answer.strip('"').split(';'):
+            entry = entry.strip()
+            entry = entry.split('=')
+            if len(entry) != 2:
+                continue
+            key, value = entry
+            if key == 'id':
+                return value.strip()
+
+        raise ValueError('Wrong DNS entry - %s' % answer)
     else:
         # make sure we have a valid tox id
         if _TOX.match(email):
