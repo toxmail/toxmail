@@ -92,6 +92,7 @@ class ToxClient(Tox):
         self.file_handler.send_file(client_id, friend_id, data, cb)
 
     def get_online_friends(self):
+        # XXX filter out friends that are not checked as relays
         online = []
         for fid in self.get_friendlist():
             if self.get_friend_connection_status(fid):
