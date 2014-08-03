@@ -96,7 +96,7 @@ class ToxClient(Tox):
         online = []
         for fid in self.get_friendlist():
             if self.get_friend_connection_status(fid):
-                online.append(fid, self.get_client_id(fid))
+                online.append((fid, self.get_client_id(fid)))
         return online
 
     def send_mail(self, mail, cb):
