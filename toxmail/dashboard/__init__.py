@@ -26,6 +26,8 @@ class DashboardHandler(tornado.web.RequestHandler):
             friend = {'friend_id': friend_id}
             client_id = tox.get_client_id(friend_id)
             friend['client_id'] = client_id
+            friend['status'] = (tox.get_friend_connection_status(friend_id) and 'online'
+                                or 'offline')
             contact = contacts.first(client_id=client_id)
             if contact is not None:
                 friend['email'] = contact.get('email', '')

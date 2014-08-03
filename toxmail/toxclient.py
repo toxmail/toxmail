@@ -4,7 +4,6 @@ import os.path
 
 from tox import Tox
 import tornado
-from nacl.public import PublicKey, PrivateKey
 
 from toxmail.mails import Mails
 from toxmail.util import FileHandler
@@ -26,9 +25,7 @@ class ToxClient(Tox):
         if os.path.exists(data):
             self.load_from_file(data)
 
-        self.privkey, self.pubkey = self.get_keys()
-        self.pubkey = PublicKey(self.pubkey.decode('hex'))
-        self.privkey = PrivateKey(self.privkey.decode('hex'))
+        self.pubkey, self.privkey = self.get_keys()
         self.server = server
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
         self.bootstrap_from_address(self.server[0], 1,
@@ -61,12 +58,10 @@ class ToxClient(Tox):
 
         if target == self.get_address():
             senderkey = mail_data['sender'][:64]
-            pubkey = PublicKey(senderkey.decode('hex'))
 
             encrypted = mail_data.get('encrypted', False)
             if encrypted:
-                print 'decrypting mail from %s' % senderkey
-                content = decrypt_text(content, self.privkey, pubkey)
+                content = decrypt_text(content, self.privkey, senderkey)
 
             self.mails.add(content)
         else:
@@ -80,11 +75,10 @@ class ToxClient(Tox):
         client_id = mail_data['client_id']
         friend_id = self._to_friend_id(client_id)
         if friend_id is None:
-            print('Could not send to %s' % client_id)
             raise ValueError('Unknown Tox friend.')
 
         if self.get_friend_connection_status(friend_id):
-            print('Friend is not online.')
+            print('Friend %s is not online.' % client_id)
             cb(False)
             return
 
@@ -95,6 +89,7 @@ class ToxClient(Tox):
         # XXX filter out friends that are not checked as relays
         online = []
         for fid in self.get_friendlist():
+            self.do()
             if self.get_friend_connection_status(fid):
                 online.append((fid, self.get_client_id(fid)))
         return online
@@ -110,12 +105,10 @@ class ToxClient(Tox):
             client_id = to[:-len('@tox')].strip()
 
         if client_id is None:
-            print('Could not send to %s' % mail)
             raise ValueError('Unknown contact.')
 
         friend_id = self._to_friend_id(client_id)
         if friend_id is None:
-            print('Could not send to %s' % client_id)
             raise ValueError('Unknown Tox friend.')
 
         to_relay = False
@@ -125,8 +118,8 @@ class ToxClient(Tox):
             # get a list of online friends
             online_friends = self.get_online_friends()
 
-            if len(online_friends) == []:
-                print('No friends online.')
+            if len(online_friends) == 0:
+                print('No friends online to relay.')
                 cb(False)
                 return
             else:
@@ -139,10 +132,7 @@ class ToxClient(Tox):
         if to_relay:
             # sending to online friends...
             client_key = client_id[:64]
-            print 'encrypting mail for %s' % client_key
-            client_key = PublicKey(client_key.decode('hex'))
             mail = encrypt_text(mail, self.privkey, client_key)
-
             data = {'mail': mail.encode('hex'), 'client_id': client_id,
                     'hash': hash, 'encrypted': True,
                     'sender': self.get_address()}
@@ -168,6 +158,7 @@ class ToxClient(Tox):
     def on_connected(self):
         print('Connected to Tox.')
         print('ID: %s' % self.get_address())
+        self.set_user_status(Tox.USERSTATUS_NONE)
 
     def _init(self):
         # keep on calling until it's connected
@@ -180,5 +171,11 @@ class ToxClient(Tox):
             self._later(self._do)
 
     def _do(self):
+        if not self.isconnected():
+            print('Disconnected from DHT - reconnecting')
+            self.bootstrap_from_address(self.server[0], 1,
+                                        self.server[1],
+                                        self.server[2])
+
         self.do()
         self._later(self._do)

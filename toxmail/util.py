@@ -24,10 +24,9 @@ class FileHandler(object):
 
     def _on_file_control(self, friend_id, receive_send, file_id, ct, data):
         if receive_send == 1 and ct == Tox.FILECONTROL_ACCEPT:
-            print 'Friend accepting the file'
+            print('Friend accepting the file.')
         elif receive_send == 0 and ct == Tox.FILECONTROL_FINISHED:
             # all data sent over
-            print 'all data sent'
             size, filename, received = self._files[file_id]
             self.on_file_received(friend_id, received)
             del self._files[file_id]
@@ -44,10 +43,13 @@ class FileHandler(object):
         chunk_size = self.tox.file_data_size(friend_id)
         try:
             file_id = self.tox.new_file_sender(friend_id, len(data), hash)
-        except OperationFailedError:
-            if tries > 10:
+        except OperationFailedError, e:
+            if tries > 20:
+                print('Could not get a file sender id')
                 cb(False)
                 return
+            else:
+                self.tox.do()
 
             self.io_loop.call_later(self.tox.interval*10,
                                     self.send_file, client_id,
@@ -62,8 +64,7 @@ class FileHandler(object):
 
     def _send_chunk(self, file_id, friend_id, data, start, end, cb, tries=0):
         total_size = len(data)
-
-        print '%d=>%d (%d)' % (start, end, total_size)
+        print('%d=>%d (%d)' % (start, end, total_size))
         chunk_size = self.tox.file_data_size(friend_id)
         if end > total_size:
             end = total_size
@@ -75,6 +76,7 @@ class FileHandler(object):
             self.tox.file_send_data(friend_id, file_id, data_to_send)
         except OperationFailedError:
             if tries > 200:
+                print('Could not send a chunk')
                 cb(False)
                 return
             self.io_loop.call_later(self.tox.interval*10, self._send_chunk,
