@@ -31,10 +31,16 @@ class DashboardHandler(tornado.web.RequestHandler):
             contact = contacts.first(client_id=client_id)
             if contact is not None:
                 friend['email'] = contact.get('email', '')
+                if friend['email'] >= 64:
+                    friend['ux_email'] = (friend['email'][:4] + '...' +
+                                          friend['email'][-4:])
+                else:
+                    friend['ux_email'] = friend['email']
                 friend['relay'] = contact.get('relay', False)
             else:
                 friend['email'] = ''
                 friend['relay'] = False
+                friend['ux_email'] = 'N/A'
 
             friends.append(friend)
 
