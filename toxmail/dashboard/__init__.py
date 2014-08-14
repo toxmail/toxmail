@@ -17,6 +17,7 @@ class DashboardHandler(tornado.web.RequestHandler):
     def get(self):
         session = _SESSIONS[self.request.remote_ip]
         tox = self.application.tox
+        args = self.application.args
         config = self.application.config
         contacts = self.application.contacts
         my_client_id = tox.get_address()
@@ -26,8 +27,8 @@ class DashboardHandler(tornado.web.RequestHandler):
             friend = {'friend_id': friend_id}
             client_id = tox.get_client_id(friend_id)
             friend['client_id'] = client_id
-            friend['status'] = (tox.get_friend_connection_status(friend_id) and 'online'
-                                or 'offline')
+            status = tox.get_friend_connection_status(friend_id)
+            friend['status'] = status and 'online' or 'offline'
             contact = contacts.first(client_id=client_id)
             if contact is not None:
                 friend['email'] = contact.get('email', '')
@@ -46,9 +47,25 @@ class DashboardHandler(tornado.web.RequestHandler):
 
         resp = loader.load("index.html").generate(client_id=my_client_id,
                                                   friends=friends,
+                                                  args=args,
                                                   config=config,
                                                   alert=session.get('alert'))
         self.write(resp)
+
+
+class RelayHandler(tornado.web.RequestHandler):
+    def post(self):
+        args = self.request.body_arguments
+        config = self.application.config
+        # XXX todo : verify data
+        if 'activate_relay' in args:
+            config['activate_relay'] = args['activate_relay'][0] == 'on'
+        else:
+            config['activate_relay'] = False
+
+        config['relay_id'] = args['relay_id'][0]
+        config.save()
+        self.redirect('/')
 
 
 class FriendHandler(tornado.web.RequestHandler):
@@ -110,6 +127,7 @@ class FriendHandler(tornado.web.RequestHandler):
 
 application = tornado.web.Application([
     (r"/", DashboardHandler),
+    (r"/relay", RelayHandler),
     (r"/friend", FriendHandler),
     (r"/friend/(.*)", FriendHandler)
 ])

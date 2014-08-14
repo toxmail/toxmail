@@ -43,7 +43,7 @@ class FileHandler(object):
         chunk_size = self.tox.file_data_size(friend_id)
         try:
             file_id = self.tox.new_file_sender(friend_id, len(data), hash)
-        except OperationFailedError, e:
+        except OperationFailedError:
             if tries > 20:
                 print('Could not get a file sender id')
                 cb(False)

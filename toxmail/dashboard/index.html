@@ -18,16 +18,43 @@
     <div class="panel-body">
     <ul>
       <li>Tox Client Id : {{client_id}}</li>
-      <li>SMTP port: {{config.smtp_port}}</li>
-      <li>POP3 port: {{config.pop3_port}}</li>
-      <li>Maildir: {{config.maildir}}</li>
-      <li>Contacts DB: {{config.contacts_db}}</li>
-      <li>Relay storage: {{config.relaydir}}</li>
-      <li>SMTP storage: {{config.smtp_storage}}</li>
+      <li>SMTP port: {{args.smtp_port}}</li>
+      <li>POP3 port: {{args.pop3_port}}</li>
+      <li>Maildir: {{args.maildir}}</li>
+      <li>Contacts DB: {{args.contacts_db}}</li>
+      <li>Relay storage: {{args.relaydir}}</li>
+      <li>SMTP storage: {{args.smtp_storage}}</li>
+      <li>Config file: {{args.config}}</li>
     </ul>
-
     </div>
   </div>
+
+
+   <div class="panel panel-primary">
+    <div class="panel-heading">
+      <h3 class="panel-title">Offline mode</h3>
+    </div>
+    <div class="panel-body">
+    <form name="relay" method="POST" action="relay">
+    <fieldset>
+      <label>Relay Id</label>
+      <input type="text" name="relay_id" size="76"
+             value="{{config.get('relay_id', '')}}"></input>
+      <span class="help-block">Node that will store your e-mails when you are offline</span>
+      <label for="activate_relay">Activate</label>
+      {% if config.get('activate_relay', True) %}
+        <input type="checkbox" name="activate_relay" id="activate_relay" checked>
+      {% else %}
+        <input type="checkbox" name="activate_relay" id="activate_relay">
+      {% end %}
+      <div>
+        <button type="submit" class="btn">Submit</button>
+      </div>
+    </fieldset>
+    </form>
+   </div>
+  </div>
+
 
    <div class="panel panel-primary">
     <div class="panel-heading">
@@ -41,7 +68,6 @@
             <th>Status</th>
             <th>Email</th>
             <th>Client Id</th>
-            <th>Relay</th>
             <th></th>
         </tr>
     </thead>
@@ -59,19 +85,10 @@
       <a href="mailto:{{friend['email']}}">{{ escape(friend['client_id']) }}</a>
   </td>
   <td>
-      {% if friend['relay'] %}
-        <input type="checkbox" checked="checked"/>
-      {% else %}
-         <input type="checkbox"/>
-
-      {% end %}
-
-  </td>
-  <td>
-  <form name="delete" action="friend" method="POST">
+    <form name="delete" action="friend" method="POST">
       <input type="hidden" name="client_id" value="{{friend['client_id']}}"></input>
       <input type="submit" name="delete" value="delete"/>
-  </form>
+    </form>
   </td>
 
   </tr>
@@ -82,7 +99,7 @@
 
   <form class="navbar-form navbar-left" role="search" name="add" action="friend" method="POST">
     <div class="form-group">
-       <input type="text" class="form-control" name="client_id" size="64" placeholder="Paste a Friend Tox Id or e-mail here to add it to the list."></input>
+       <input type="text" class="form-control" name="client_id" size="76" placeholder="Paste a Friend Tox Id or e-mail here to add it to the list."></input>
 
     </div>
     <input name="add" type="submit" class="btn btn-default"/>

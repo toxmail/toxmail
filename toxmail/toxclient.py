@@ -17,8 +17,10 @@ _SERVER = ["54.199.139.199", 33445,
 class ToxClient(Tox):
 
     def __init__(self, data='data', maildir=None, relaydir=None,
-                 contacts=None, io_loop=None, server=None):
+                 contacts=None, io_loop=None, server=None,
+                 config=None):
         self.contacts = contacts
+        self.config = config
         if server is None:
             server = _SERVER
         self.data = data
@@ -112,17 +114,24 @@ class ToxClient(Tox):
             raise ValueError('Unknown Tox friend.')
 
         to_relay = False
+        relay_friend_id = relay_id = None
+
         if not self.get_friend_connection_status(friend_id):
             print('Friend not connected')
 
-            # get a list of online friends
-            online_friends = self.get_online_friends()
+            # check if the relay mode is activated
+            if self.config.get('activate_relay', False):
+                relay_id = self.config['relay_id']
+                relay_friend_id = self._to_friend_id(relay_id)
 
-            if len(online_friends) == 0:
-                print('No friends online to relay.')
-                cb(False)
-                return
-            else:
+                if relay_friend_id is None:
+                    raise ValueError('Unknown Tox node.')
+
+                if not self.get_friend_connection_status(relay_friend_id):
+                    print('Relay node not online.')
+                    cb(False)
+                    return
+
                 to_relay = True
 
         mail['X-Tox-Client-Id'] = client_id
@@ -130,7 +139,7 @@ class ToxClient(Tox):
         hash = hashlib.md5(mail).hexdigest()
 
         if to_relay:
-            # sending to online friends...
+            # sending to the relay
             client_key = client_id[:64]
             mail = encrypt_text(mail, self.privkey, client_key)
             data = {'mail': mail.encode('hex'), 'client_id': client_id,
@@ -138,9 +147,7 @@ class ToxClient(Tox):
                     'sender': self.get_address()}
             data = json.dumps(data)
 
-            # XXX add myself to one of the relayers
-            for fid, cid in online_friends:
-                self.file_handler.send_file(cid, fid, data, cb)
+            self.file_handler.send_file(relay_id, relay_friend_id, data, cb)
         else:
             # sending directly to rcpt
             data = {'mail': mail.encode('hex'), 'client_id': client_id,

@@ -2,11 +2,12 @@
 ToxMail
 =======
 
-**HIGHLY EXPERIMENTAL - USE AT YOUR OWN RISKS**
+**HIGHLY EXPERIMENTAL - DON'T USE IT**
 
-ToxMail is a secure messaging system that can be used to send
-and receive e-mails from your friends and family using your
+ToxMail is a prototype of a secure messaging system that can be used
+to send and receive e-mails from your friends and family using your
 usual e-mail desktop client and maybe your webmail.
+
 
 Installation
 ------------
