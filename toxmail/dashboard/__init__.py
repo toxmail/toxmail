@@ -63,7 +63,23 @@ class RelayHandler(tornado.web.RequestHandler):
         else:
             config['activate_relay'] = False
 
-        config['relay_id'] = args['relay_id'][0]
+        relay_id = args['relay_id'][0]
+
+
+        if relay_id:
+            try:
+                tox.add_friend_norequest(relay_id)
+            except OperationFailedError, e:
+                # XXX we want an error message
+                print str(e)
+                session['alert'] = str(e)
+                self.redirect('/')
+                return
+            else:
+                tox.save()
+
+            config['relay_id'] = relay_id
+
         config.save()
         self.redirect('/')
 

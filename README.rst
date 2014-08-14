@@ -34,16 +34,42 @@ and public key. **Do not let anyone get this file**
 
 Your e-mails will be kept into the **bob.mails** directory.
 
-Toxmail Dasbhoard
------------------
 
-Once Toxmail is running, visit http://localhost:8080, you should
-see the dashboard with information about the configuration,
-a list of friends and a form to add new friends.
+Configuration
+-------------
+
+Once Toxmail is running, visit http://localhost:8080, you should see the dashboard with information
+about the configuration, the offline mode settings, a list of friends and a form to add new friends.
+
+
+Offline Mode
+============
+
+When you send an e-mail to one of your contacts, they will receive it only if
+they are connected. In case the recipient is offline, Toxmail will attempt to
+send the mail regularly.
+
+To maximize the chances of reaching a recipient, you can activate the offline
+mode. When this mode is activated, the mail is relayed to a **super node** that
+should be online all the time. The mail is stored on that node and will be
+relayed to the target recipient whenever they come online
+
+For this feature to work, both you and your recipient have to activate the
+offline mode against the same super node.
+
+.. note::
+
+   Allowing multiple relay nodes is a planned feature.
+
+
+Adding friends
+==============
+
+XXX
 
 
 Configuring your e-mail client
-------------------------------
+==============================
 
 XXX
 
