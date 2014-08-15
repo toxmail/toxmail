@@ -2,7 +2,6 @@ from setuptools import setup, find_packages
 from toxmail import __version__
 
 
-import pdb; pdb.set_trace()
 install_requires = [i.strip() for i in open("requirements.txt").readlines()]
 
 try:
