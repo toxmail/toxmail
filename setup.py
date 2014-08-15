@@ -35,4 +35,5 @@ setup(name='toxmail',
       entry_points="""
       [console_scripts]
       toxmail = toxmail.run:main
+      toxrelay = toxmail.run:relay
       """)

@@ -14,6 +14,8 @@ _SESSIONS = defaultdict(dict)
 
 
 class DashboardHandler(tornado.web.RequestHandler):
+    template = 'index.html'
+
     def get(self):
         session = _SESSIONS[self.request.remote_ip]
         tox = self.application.tox
@@ -45,11 +47,12 @@ class DashboardHandler(tornado.web.RequestHandler):
 
             friends.append(friend)
 
-        resp = loader.load("index.html").generate(client_id=my_client_id,
-                                                  friends=friends,
-                                                  args=args,
-                                                  config=config,
-                                                  alert=session.get('alert'))
+        resp = loader.load(self.template)
+        resp = resp.generate(client_id=my_client_id,
+                             friends=friends,
+                             args=args,
+                             config=config,
+                             alert=session.get('alert'))
         self.write(resp)
 
 
@@ -57,6 +60,9 @@ class RelayHandler(tornado.web.RequestHandler):
     def post(self):
         args = self.request.body_arguments
         config = self.application.config
+        tox = self.application.tox
+        session = _SESSIONS[self.request.remote_ip]
+
         # XXX todo : verify data
         if 'activate_relay' in args:
             config['activate_relay'] = args['activate_relay'][0] == 'on'
@@ -64,7 +70,6 @@ class RelayHandler(tornado.web.RequestHandler):
             config['activate_relay'] = False
 
         relay_id = args['relay_id'][0]
-
 
         if relay_id:
             try:
