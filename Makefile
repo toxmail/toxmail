@@ -1,11 +1,13 @@
 .PHONY: docs build test
 
+VIRTUALENV = virtualenv
 ifndef VTENV_OPTS
 VTENV_OPTS = "--no-site-packages"
 endif
 
 build:	
-	virtualenv-2.7 $(VTENV_OPTS) .
+	$(VIRTUALENV) $(VTENV_OPTS) .
+	bin/pip install git+https://github.com/aitjcize/PyTox.git
 	bin/python setup.py develop
 	bin/pip install flake8
 

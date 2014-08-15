@@ -3,7 +3,7 @@ from toxmail import __version__
 
 
 install_requires = ['PyTox', 'tornado', 'bonzo', 'pyzmail',
-                    'pynacl']
+                    'pynacl', 'dnspython']
 
 try:
     import argparse     # NOQA

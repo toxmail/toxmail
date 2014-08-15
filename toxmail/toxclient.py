@@ -30,7 +30,7 @@ class ToxClient(Tox):
         self.pubkey, self.privkey = self.get_keys()
         self.server = server
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
-        self.bootstrap_from_address(self.server[0], 1,
+        self.bootstrap_from_address(self.server[0],
                                     self.server[1],
                                     self.server[2])
         self.io_loop.add_callback(self._init)
