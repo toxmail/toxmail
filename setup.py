@@ -3,6 +3,8 @@ from toxmail import __version__
 
 
 install_requires = [i.strip() for i in open("requirements.txt").readlines()]
+dependency_links=[
+    "git+https://github.com/aitjcize/PyTox.git#egg=PyTox"]
 
 try:
     import argparse     # NOQA
@@ -31,6 +33,7 @@ setup(name='toxmail',
       zip_safe=False,
       classifiers=classifiers,
       install_requires=install_requires,
+      dependency_links=dependency_links,
       entry_points="""
       [console_scripts]
       toxmail = toxmail.run:main
