@@ -108,7 +108,7 @@ def main():
 def relay():
     parser = argparse.ArgumentParser(description='ToxMail Relay Node.')
 
-    parser.add_argument('--web-port', type=int, default=8080,
+    parser.add_argument('--web-port', type=int, default=None,
                         help="Dashboard port")
 
     parser.add_argument('--tox-data', default='data',
@@ -144,7 +144,6 @@ def relay():
     print('Contact Database %r' % args.contacts_db)
     print('Relay storage %r' % args.relaydir)
     print('Config file %r' % args.config)
-    print('Serving Dashboard on localhost:%d' % args.web_port)
 
     config = Config(args.config)
     contacts = Contacts(args.contacts_db)
@@ -153,11 +152,13 @@ def relay():
                     config=config)
     relay = Relay(args.relaydir, tox.relay_mail)
 
-    relayapp.tox = tox
-    relayapp.args = args
-    relayapp.config = config
-    relayapp.contacts = contacts
-    relayapp.listen(args.web_port)
+    if args.web_port is not None:
+        relayapp.tox = tox
+        relayapp.args = args
+        relayapp.config = config
+        relayapp.contacts = contacts
+        relayapp.listen(args.web_port)
+        print('Serving Dashboard on localhost:%d' % args.web_port)
 
     try:
         tornado.ioloop.IOLoop.current().start()
