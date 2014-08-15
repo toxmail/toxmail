@@ -7,7 +7,6 @@ endif
 
 build:	
 	$(VIRTUALENV) $(VTENV_OPTS) .
-	bin/pip install git+https://github.com/aitjcize/PyTox.git
 	bin/python setup.py develop
 	bin/pip install flake8
 
