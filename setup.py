@@ -3,7 +3,7 @@ from toxmail import __version__
 
 
 install_requires = ['tornado', 'bonzo', 'pyzmail', 'pynacl', 'dnspython',
-                    'PyTox==dev']
+                    'PyTox']
 dependency_links = ['git+https://github.com/aitjcize/PyTox.git#egg=PyTox-dev']
 
 try:
