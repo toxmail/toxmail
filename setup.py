@@ -3,8 +3,8 @@ from toxmail import __version__
 
 
 install_requires = ['tornado', 'bonzo', 'pyzmail', 'pynacl', 'dnspython',
-                    'PyTox']
-dependency_links = ['git+https://github.com/aitjcize/PyTox.git#egg=PyTox']
+                    'PyTox==dev']
+dependency_links = ['git+https://github.com/aitjcize/PyTox.git#egg=PyTox-dev']
 
 try:
     import argparse     # NOQA
