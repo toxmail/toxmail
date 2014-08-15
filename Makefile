@@ -5,8 +5,9 @@ ifndef VTENV_OPTS
 VTENV_OPTS = "--no-site-packages"
 endif
 
-build:	
+build:
 	$(VIRTUALENV) $(VTENV_OPTS) .
+	bin/pip install --upgrade setuptools
 	bin/python setup.py develop
 	bin/pip install flake8
 
