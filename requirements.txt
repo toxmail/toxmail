@@ -1,6 +1,4 @@
-tornado
-bonzo
-pyzmail
-pynacl
-dnspython
-PyTox
+--index-url https://pypi.python.org/simple/
+
+-e git+https://github.com/aitjcize/PyTox.git#egg=PyTox
+-e .

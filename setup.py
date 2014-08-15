@@ -2,9 +2,9 @@ from setuptools import setup, find_packages
 from toxmail import __version__
 
 
-install_requires = [i.strip() for i in open("requirements.txt").readlines()]
-dependency_links=[
-    "git+https://github.com/aitjcize/PyTox.git#egg=PyTox"]
+install_requires = ['tornado', 'bonzo', 'pyzmail', 'pynacl', 'dnspython',
+                    'PyTox']
+dependency_links = ['git+https://github.com/aitjcize/PyTox.git#egg=PyTox']
 
 try:
     import argparse     # NOQA
