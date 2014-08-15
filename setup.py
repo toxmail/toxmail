@@ -2,8 +2,8 @@ from setuptools import setup, find_packages
 from toxmail import __version__
 
 
-install_requires = ['PyTox', 'tornado', 'bonzo', 'pyzmail',
-                    'pynacl', 'dnspython']
+import pdb; pdb.set_trace()
+install_requires = [i.strip() for i in open("requirements.txt").readlines()]
 
 try:
     import argparse     # NOQA
